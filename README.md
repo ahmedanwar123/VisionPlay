@@ -17,10 +17,50 @@ To run this project, make sure you have the following libraries installed:
 - OpenCV
 - NumPy
 - Scikit-learn
+## Installation
 
-## Features
+### Clone the repository
+```
+git clone https://github.com/ahmedanwar123/VisionPlay.git
+```
+```
+cd VisionPlay
+```
 
-- **Object Detection**: Uses YOLOv11 to detect players and other objects in real-time from image or video input.
+#### Using pip/venv
+
+**Create virtual environment**
+```
+python -m venv football
+```
+### Activate the environment
+
+**For Unix/MacOS:**
+```
+source football/bin/activate
+```
+**For Windows:**
+```
+football\Scripts\activate
+```
+**Install requirements**
+pip install -r requirements.txt
+
+### Using Conda
+
+**Create the conda environment**
+```
+conda env create -f conda-env.yaml
+```
+**Activate the environment**
+```
+conda activate football
+```
+
+
+## Features (Subject to edits)
+
+- **Object Detection**: Uses YOLO to detect players and other objects in real-time from image or video input.
 - **Player Segmentation**: Segments players from the background using K-Means clustering and identifies t-shirt color.
 - **Camera Movement Tracking**: Measures camera movement through optical flow analysis.
 - **Scene Perspective**: Transforms the scene's perspective to represent depth using OpenCV.
