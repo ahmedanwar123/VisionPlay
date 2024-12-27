@@ -1,0 +1,26 @@
+name: football
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - more-itertools=10.5.0
+  - numpy=1.26.4
+  - pandas=2.2.0
+  - scikit-learn=1.4.2
+  - tqdm=4.66.2
+  - pip=23.3.1
+  - pytorch
+  - torchvision
+  - torchaudio
+  - pillow
+  - scikit-image
+  - pip:
+    - opencv-python==4.7.0.72
+    - opencv-python-headless==4.10.0.84
+    - supervision==0.18.0
+    - transformers==4.44.2
+    - ultralytics==8.2.74
+    - umap-learn==0.5.6
+    - streamlit
