@@ -50,3 +50,8 @@ wheels/
 # System Files
 .DS_Store
 Thumbs.db
+
+/video_samples/
+/output_videos/
+*.pkl
+/models/
