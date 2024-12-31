@@ -9,14 +9,29 @@ import sys
 
 sys.path.append("../")
 from utils import get_center_of_bbox, get_bbox_width, get_foot_position
+from typing import List, Dict, Any, Optional, Tuple
 
 
 class Tracker:
-    def __init__(self, model_path):
+    def __init__(self, model_path: str) -> None:
+        """
+        Initializes the Tracker with a YOLO model and a ByteTrack tracker.
+
+        Args:
+            model_path (str): Path to the YOLO model file.
+        """
         self.model = YOLO(model_path)
         self.tracker = sv.ByteTrack()
 
-    def add_position_to_tracks(self, tracks):
+    def add_position_to_tracks(
+        self, tracks: Dict[str, List[Dict[int, Dict[str, Any]]]]
+    ) -> None:
+        """
+        Adds position information to the tracks for each object (ball, players, referees).
+
+        Args:
+            tracks (Dict[str, List[Dict[int, Dict[str, Any]]]]): Dictionary containing tracks for players, referees, and the ball.
+        """
         for object, object_tracks in tracks.items():
             for frame_num, track in enumerate(object_tracks):
                 for track_id, track_info in track.items():
@@ -27,12 +42,24 @@ class Tracker:
                         position = get_foot_position(bbox)
                     tracks[object][frame_num][track_id]["position"] = position
 
-    def interpolate_ball_positions(self, ball_positions):
+    def interpolate_ball_positions(
+        self, ball_positions: List[Dict[int, Dict[str, List[float]]]]
+    ) -> List[Dict[int, Dict[str, List[float]]]]:
+        """
+        Interpolates missing ball positions in the track.
+
+        Args:
+            ball_positions (List[Dict[int, Dict[str, List[float]]]]): List of ball positions with missing values.
+
+        Returns:
+            List[Dict[int, Dict[str, List[float]]]]: List of interpolated ball positions.
+        """
         ball_positions = [x.get(1, {}).get("bbox", []) for x in ball_positions]
         df_ball_positions = pd.DataFrame(
             ball_positions, columns=["x1", "y1", "x2", "y2"]
         )
 
+        # Interpolate missing values
         df_ball_positions = df_ball_positions.interpolate()
         df_ball_positions = df_ball_positions.bfill()
 
@@ -42,7 +69,16 @@ class Tracker:
 
         return ball_positions
 
-    def detect_frames(self, frames):
+    def detect_frames(self, frames: List[np.ndarray]) -> List[Any]:
+        """
+        Detects objects in the given frames using the YOLO model.
+
+        Args:
+            frames (List[np.ndarray]): List of video frames.
+
+        Returns:
+            List[Any]: List of detections for each frame.
+        """
         batch_size = 20
         detections = []
         for i in range(0, len(frames), batch_size):
@@ -50,7 +86,23 @@ class Tracker:
             detections += detections_batch
         return detections
 
-    def get_object_tracks(self, frames, read_from_stub=False, stub_path=None):
+    def get_object_tracks(
+        self,
+        frames: List[np.ndarray],
+        read_from_stub: bool = False,
+        stub_path: Optional[str] = None,
+    ) -> Dict[str, List[Dict[int, Dict[str, Any]]]]:
+        """
+        Tracks objects (players, referees, ball) across frames.
+
+        Args:
+            frames (List[np.ndarray]): List of video frames.
+            read_from_stub (bool): Whether to read tracks from a saved stub file.
+            stub_path (Optional[str]): Path to the stub file.
+
+        Returns:
+            Dict[str, List[Dict[int, Dict[str, Any]]]]: Dictionary containing tracks for players, referees, and the ball.
+        """
         if read_from_stub and stub_path is not None and os.path.exists(stub_path):
             with open(stub_path, "rb") as f:
                 tracks = pickle.load(f)
@@ -64,16 +116,18 @@ class Tracker:
             cls_names = detection.names
             cls_names_inv = {v: k for k, v in cls_names.items()}
 
+            # Convert to supervision Detection format
             detection_supervision = sv.Detections.from_ultralytics(detection)
 
+            # Convert GoalKeeper to player object
             for object_ind, class_id in enumerate(detection_supervision.class_id):
                 if cls_names[class_id] == "goalkeeper":
                     detection_supervision.class_id[object_ind] = cls_names_inv["player"]
 
+            # Track Objects
             detection_with_tracks = self.tracker.update_with_detections(
                 detection_supervision
             )
-            print(detection_with_tracks)
 
             tracks["players"].append({})
             tracks["referees"].append({})
@@ -103,7 +157,25 @@ class Tracker:
 
         return tracks
 
-    def draw_ellipse(self, frame, bbox, color, track_id=None):
+    def draw_ellipse(
+        self,
+        frame: np.ndarray,
+        bbox: List[float],
+        color: Tuple[int, int, int],
+        track_id: Optional[int] = None,
+    ) -> np.ndarray:
+        """
+        Draws an ellipse around the object in the frame.
+
+        Args:
+            frame (np.ndarray): The video frame.
+            bbox (List[float]): Bounding box coordinates [x1, y1, x2, y2].
+            color (Tuple[int, int, int]): Color of the ellipse.
+            track_id (Optional[int]): ID of the track to display.
+
+        Returns:
+            np.ndarray: The frame with the ellipse drawn.
+        """
         y2 = int(bbox[3])
         x_center, _ = get_center_of_bbox(bbox)
         width = get_bbox_width(bbox)
@@ -152,7 +224,20 @@ class Tracker:
 
         return frame
 
-    def draw_traingle(self, frame, bbox, color):
+    def draw_triangle(
+        self, frame: np.ndarray, bbox: List[float], color: Tuple[int, int, int]
+    ) -> np.ndarray:
+        """
+        Draws a triangle above the object in the frame.
+
+        Args:
+            frame (np.ndarray): The video frame.
+            bbox (List[float]): Bounding box coordinates [x1, y1, x2, y2].
+            color (Tuple[int, int, int]): Color of the triangle.
+
+        Returns:
+            np.ndarray: The frame with the triangle drawn.
+        """
         y = int(bbox[1])
         x, _ = get_center_of_bbox(bbox)
 
@@ -168,15 +253,28 @@ class Tracker:
 
         return frame
 
-    def draw_team_ball_control(self, frame, frame_num, team_ball_control):
-        overlay = frame.copy()
+    def draw_team_ball_control(
+        self, frame: np.ndarray, frame_num: int, team_ball_control: List[int]
+    ) -> np.ndarray:
+        """
+        Draws the team ball control statistics on the frame.
 
+        Args:
+            frame (np.ndarray): The video frame.
+            frame_num (int): Current frame number.
+            team_ball_control (List[int]): List of team ball control values for each frame.
+
+        Returns:
+            np.ndarray: The frame with the ball control statistics drawn.
+        """
+        # Draw a semi-transparent rectangle
+        overlay = frame.copy()
         cv2.rectangle(overlay, (1350, 850), (1900, 970), (255, 255, 255), -1)
         alpha = 0.4
         cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
 
         team_ball_control_till_frame = team_ball_control[: frame_num + 1]
-
+        # Get the number of times each team had ball control
         team_1_num_frames = team_ball_control_till_frame[
             team_ball_control_till_frame == 1
         ].shape[0]
@@ -188,7 +286,7 @@ class Tracker:
 
         cv2.putText(
             frame,
-            f"Team 1 Ball Control: {team_1*100:.2f}%",
+            f"Team 1 Ball Control: {team_1 * 100:.2f}%",
             (1400, 900),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
@@ -197,7 +295,7 @@ class Tracker:
         )
         cv2.putText(
             frame,
-            f"Team 2 Ball Control: {team_2*100:.2f}%",
+            f"Team 2 Ball Control: {team_2 * 100:.2f}%",
             (1400, 950),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
@@ -207,7 +305,23 @@ class Tracker:
 
         return frame
 
-    def draw_annotations(self, video_frames, tracks, team_ball_control):
+    def draw_annotations(
+        self,
+        video_frames: List[np.ndarray],
+        tracks: Dict[str, List[Dict[int, Dict[str, Any]]]],
+        team_ball_control: List[int],
+    ) -> List[np.ndarray]:
+        """
+        Draws annotations (players, referees, ball, and ball control statistics) on the video frames.
+
+        Args:
+            video_frames (List[np.ndarray]): List of video frames.
+            tracks (Dict[str, List[Dict[int, Dict[str, Any]]]]): Dictionary containing tracks for players, referees, and the ball.
+            team_ball_control (List[int]): List of team ball control values for each frame.
+
+        Returns:
+            List[np.ndarray]: List of annotated video frames.
+        """
         output_video_frames = []
         for frame_num, frame in enumerate(video_frames):
             frame = frame.copy()
@@ -216,19 +330,23 @@ class Tracker:
             ball_dict = tracks["ball"][frame_num]
             referee_dict = tracks["referees"][frame_num]
 
+            # Draw Players
             for track_id, player in player_dict.items():
                 color = player.get("team_color", (0, 0, 255))
                 frame = self.draw_ellipse(frame, player["bbox"], color, track_id)
 
                 if player.get("has_ball", False):
-                    frame = self.draw_traingle(frame, player["bbox"], (0, 0, 255))
+                    frame = self.draw_triangle(frame, player["bbox"], (0, 0, 255))
 
+            # Draw Referee
             for _, referee in referee_dict.items():
                 frame = self.draw_ellipse(frame, referee["bbox"], (0, 255, 255))
 
+            # Draw Ball
             for track_id, ball in ball_dict.items():
-                frame = self.draw_traingle(frame, ball["bbox"], (0, 255, 0))
+                frame = self.draw_triangle(frame, ball["bbox"], (0, 255, 0))
 
+            # Draw Team Ball Control
             frame = self.draw_team_ball_control(frame, frame_num, team_ball_control)
 
             output_video_frames.append(frame)
