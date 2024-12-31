@@ -1,11 +1,11 @@
 from utils import read_video, save_video
 from tracker import Tracker
-import cv2
 import numpy as np
 from color_assigner import ColorAssigner
 from player_ball_assigner import PlayerBallAssigner
 from view_transformer import ViewTransformer
 from camera_movement_estimator import CameraMovementEstimator
+from speed_distance_estimator import SpeedDistanceEstimator
 
 
 def main():
@@ -28,6 +28,9 @@ def main():
 
     view_transformer = ViewTransformer()
     view_transformer.add_transformed_position_to_tracks(tracks)
+
+    speed_distance_estimator = SpeedDistanceEstimator()
+    speed_distance_estimator.add_speed_distance_to_tracks(tracks)
 
     tracks["ball"] = tracker.interpolate_ball_positions(tracks["ball"])
 
@@ -62,6 +65,12 @@ def main():
     output_video_frames = tracker.draw_annotations(
         video_frames, tracks, team_ball_control
     )
+
+    output_video_frames = camera_movement_estimator.draw_camera_movement(
+        output_video_frames, camera_movement_per_frame
+    )
+
+    speed_distance_estimator.draw_speed_and_distance(output_video_frames, tracks)
 
     save_video(output_video_frames, "output_videos/output_video.avi")
 
