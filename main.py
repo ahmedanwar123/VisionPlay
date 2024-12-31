@@ -10,7 +10,7 @@ Functions:
 """
 
 from utils import read_video, save_video
-from trackers import Tracker
+from tracker import Tracker
 import cv2
 import numpy as np
 from color_assigner import ColorAssigner
@@ -37,7 +37,7 @@ def main():
     10. Saves the annotated video as an output file.
     """
     # Read Video
-    video_frames = read_video("input_videos/08fd33_4.mp4")
+    video_frames = read_video("input_videos/1.mp4")
 
     # Initialize Tracker
     tracker = Tracker("models/best.pt")
