@@ -2,6 +2,7 @@ import pickle
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
+import os
 import cv2
 import numpy as np
 import sys
@@ -69,9 +70,9 @@ class CameraMovementEstimator:
                         position[0] - camera_movement[0],
                         position[1] - camera_movement[1],
                     )
-                    tracks[object][frame_num][track_id]["position_adjusted"] = (
-                        position_adjusted
-                    )
+                    tracks[object][frame_num][track_id][
+                        "position_adjusted"
+                    ] = position_adjusted
 
     def get_camera_movement(
         self,
@@ -91,7 +92,7 @@ class CameraMovementEstimator:
             List[List[float]]: List of camera movements for each frame.
         """
         # Load camera movement from stub file if requested and the file exists
-        if read_from_stub and stub_path is not None and stub_path.exists():
+        if read_from_stub and stub_path is not None and os.path.exists(stub_path):
             with open(stub_path, "rb") as f:
                 return pickle.load(f)
 
